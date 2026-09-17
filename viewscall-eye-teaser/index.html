@@ -2,8 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, height=1080" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <meta name="viewport" content="width=1080, height=540" />
+    <title>ViewsCall eye — 5s loop</title>
+    <script src="vendor/gsap.min.js"></script>
     <style>
       * {
         margin: 0;
@@ -13,24 +14,24 @@
       html,
       body {
         margin: 0;
-        width: 1920px;
-        height: 1080px;
         overflow: hidden;
-        background: #0a0a0a;
+        background: #ffffff;
       }
       #root {
+        position: relative;
         width: 100%;
         height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        overflow: hidden;
+        background: #ffffff; /* reference canvas background: solid white */
       }
-      #title {
-        color: #f4f4f5;
-        font-size: 72px;
-        font-weight: 600;
-        letter-spacing: -0.03em;
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      #stage {
+        display: block;
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
@@ -39,15 +40,124 @@
       id="root"
       data-composition-id="main"
       data-start="0"
-      data-duration="10"
-      data-width="1920"
-      data-height="1080"
+      data-duration="5"
+      data-width="1080"
+      data-height="540"
+      data-fps="20"
     >
-      <h1 id="title" class="clip" data-start="0" data-duration="10" data-track-index="0">Title</h1>
+      <section id="eye-scene" class="clip" data-start="0" data-duration="5" data-track-index="0">
+        <!--
+          Eye geometry is reconstructed from reference/ViewsCall_eye.png (1080x1080):
+            eye bbox   ≈ x 345..735, y 438..642  →  eye_w = 390, eye_h = 204  (eye_h/eye_w = 0.523)
+            pupil      ≈ centre (614, 512), r 45  →  +0.18*eye_w right, −0.137*eye_h up, r = 0.115*eye_w
+          The eye shape is a true vesica: two circular arcs of radius R = (eye_w²/4 + eye_h²/4) / eye_h.
+          Canvas 1080x540 keeps the eye at reference pixel size and leaves room for the swing
+          (−0.6*eye_w left with overshoot, +0.2*eye_w right, +0.3*eye_h down).
+        -->
+        <svg id="stage" viewBox="0 0 1080 540" xmlns="http://www.w3.org/2000/svg" aria-label="ViewsCall eye">
+          <g transform="translate(540 270)">
+            <g id="eye-pos">
+              <g id="eye-blink">
+                <path id="eye-shape" d="" fill="#FF0033" />
+                <circle id="pupil" cx="0" cy="0" r="0" fill="#ffffff" />
+              </g>
+            </g>
+          </g>
+        </svg>
+      </section>
     </div>
     <script>
+      /* ---------- reference-derived constants (see tools/sample-reference.mjs) ---------- */
+      const EYE_RED = "#FF0033"; // TODO: replace with the value printed by tools/sample-reference.mjs
+      const EYE_W = 390; // width of the eye figure, px
+      const EYE_H = 204; // height at the widest point, px
+      const PUPIL_R = Math.round(0.115 * EYE_W); // 45
+      const PUPIL_DX = Math.round(0.18 * EYE_W); // 70  — standard (resting) horizontal offset
+      const PUPIL_DY = -Math.round(0.137 * EYE_H); // -28 — reference vertical offset (kept constant)
+
+      /* ---------- build the SVG figure ---------- */
+      const hw = EYE_W / 2;
+      const hh = EYE_H / 2;
+      const R = (hw * hw + hh * hh) / (2 * hh); // vesica arc radius
+      const shape = document.getElementById("eye-shape");
+      shape.setAttribute("d", `M ${-hw} 0 A ${R} ${R} 0 0 1 ${hw} 0 A ${R} ${R} 0 0 1 ${-hw} 0 Z`);
+      shape.setAttribute("fill", EYE_RED);
+      const pupil = document.getElementById("pupil");
+      pupil.setAttribute("r", PUPIL_R);
+      pupil.setAttribute("cy", PUPIL_DY);
+
+      /* ---------- arc helpers ----------
+         Each swing is a quadratic Bézier S → B (lowest point) → E, control point chosen so the
+         curve passes through B at t = 0.5. Progress along the curve is split into two legs so the
+         lowest point lands exactly at the requested time; the second leg carries the spring ease.
+         Every tween is a plain GSAP property tween with a function ease — no callbacks, so every
+         frame is a pure function of time and seeks are exact. */
+      function quadArc(S, B, E) {
+        const P1 = { x: 2 * B.x - (S.x + E.x) / 2, y: 2 * B.y - (S.y + E.y) / 2 };
+        return (t) => {
+          const a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t;
+          return { x: a * S.x + b * P1.x + c * E.x, y: a * S.y + b * P1.y + c * E.y };
+        };
+      }
+      // Ease that moves a property along `curve[axis]` from curve(t0) to curve(t1) with inner ease g.
+      function legEase(curve, axis, t0, t1, g) {
+        const v0 = curve(t0)[axis];
+        const d = curve(t1)[axis] - v0;
+        return (u) => (d === 0 ? u : (curve(t0 + (t1 - t0) * g(u))[axis] - v0) / d);
+      }
+      function swing(tl, target, curve, at, dur, gIn, gOut, pupilFrom, pupilTo) {
+        const half = dur / 2;
+        const p0 = curve(0), pMid = curve(0.5), p1 = curve(1);
+        const legs = [
+          { t0: 0, t1: 0.5, g: gIn, at: at, from: p0, to: pMid },
+          { t0: 0.5, t1: 1, g: gOut, at: at + half, from: pMid, to: p1 },
+        ];
+        const xTotal = p1.x - p0.x;
+        let pupilCursor = pupilFrom;
+        for (const L of legs) {
+          const ex = legEase(curve, "x", L.t0, L.t1, L.g);
+          const ey = legEase(curve, "y", L.t0, L.t1, L.g);
+          tl.fromTo(target, { x: L.from.x }, { x: L.to.x, duration: half, ease: ex, immediateRender: false }, L.at);
+          tl.fromTo(target, { y: L.from.y }, { y: L.to.y, duration: half, ease: ey, immediateRender: false }, L.at);
+          // pupil tracks the eye's horizontal progress (same ease shape → synchronous)
+          const frac = (L.to.x - L.from.x) / xTotal;
+          const pupilNext = pupilCursor + (pupilTo - pupilFrom) * frac;
+          tl.fromTo(pupil, { x: pupilCursor }, { x: pupilNext, duration: half, ease: ex, immediateRender: false }, L.at);
+          pupilCursor = pupilNext;
+        }
+      }
+
+      /* ---------- timeline ---------- */
+      const START = { x: 0, y: 0 };
+      const eyePos = "#eye-pos";
+      const blink = "#eye-blink";
       const tl = gsap.timeline({ paused: true });
-      // Example: tl.fromTo("#title", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6 }, 0);
+      // Resting state (== frame 0 == frame 5.0, the loop seam)
+      tl.set(eyePos, { x: START.x, y: START.y }, 0);
+      tl.set(pupil, { x: PUPIL_DX }, 0);
+      tl.set(blink, { scaleY: 1, transformOrigin: "50% 50%" }, 0);
+
+      const gIn = gsap.parseEase("power1.in"); // swoop from rest into the bottom of the arc
+      const gSpring = gsap.parseEase("back.out(1.7)"); // springy settle into the end position
+
+      const LEFT = { x: -0.6 * EYE_W, y: 0 };
+      const OVER = { x: 0.2 * EYE_W, y: 0 };
+
+      // 0.0–1.0s  Movement 1: left via the bottom, lowest point (−0.5w, +0.3h) at 0.5s
+      swing(tl, eyePos, quadArc(START, { x: -0.5 * EYE_W, y: 0.3 * EYE_H }, LEFT), 0, 1, gIn, gSpring, PUPIL_DX, -PUPIL_DX);
+      // 1.0–2.0s  Movement 2: back right via the bottom (mirrored arc), overshoot to +0.2w
+      swing(tl, eyePos, quadArc(LEFT, { x: 0.1 * EYE_W, y: 0.3 * EYE_H }, OVER), 1, 1, gIn, gSpring, -PUPIL_DX, PUPIL_DX);
+      // 2.0–3.0s  Movement 3: overshoot → start, straight, soft; pupil → centre
+      tl.fromTo(eyePos, { x: OVER.x }, { x: START.x, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+      tl.fromTo(eyePos, { y: OVER.y }, { y: START.y, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+      tl.fromTo(pupil, { x: PUPIL_DX }, { x: 0, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+      // 3.0–4.0s  Hold (nothing scheduled)
+      // 4.0–4.2s  Blink close, 4.2–4.4s blink open — whole figure, about its own centre
+      tl.fromTo(blink, { scaleY: 1, transformOrigin: "50% 50%" }, { scaleY: 0, duration: 0.2, ease: "power1.in", immediateRender: false }, 4);
+      tl.fromTo(blink, { scaleY: 0, transformOrigin: "50% 50%" }, { scaleY: 1, duration: 0.2, ease: "power1.out", immediateRender: false }, 4.2);
+      // 4.4–5.0s  Pupil returns to the standard position → frame 5.0 == frame 0.0
+      tl.fromTo(pupil, { x: 0 }, { x: PUPIL_DX, duration: 0.6, ease: "power2.inOut", immediateRender: false }, 4.4);
+
       window.__timelines["main"] = tl;
       tl.seek(0);
     </script>
