@@ -1,0 +1,107 @@
+// ViewsCall eye — figure + timeline shared by index.html (landscape) and portrait/index.html (9:16).
+// Each page calls buildEyeTimeline() and registers the result on window.__timelines itself.
+function buildEyeTimeline() {
+  /* ---------- reference-derived constants (see tools/sample-reference.mjs) ---------- */
+  const EYE_RED = "#FF0033"; // TODO: replace with the value printed by tools/sample-reference.mjs
+  const EYE_W = 390; // width of the eye figure, px
+  const EYE_H = 204; // height at the widest point, px
+  const PUPIL_R = Math.round(0.115 * EYE_W); // 45
+  const PUPIL_DX = Math.round(0.18 * EYE_W); // 70  — standard (resting) horizontal offset
+  const PUPIL_DY = -Math.round(0.137 * EYE_H); // -28 — reference vertical offset (kept constant)
+
+  /* ---------- centre the figure on whatever canvas the composition declares ---------- */
+  const root = document.querySelector("[data-composition-id]");
+  const CW = Number(root.dataset.width), CH = Number(root.dataset.height);
+  document.getElementById("stage").setAttribute("viewBox", `0 0 ${CW} ${CH}`);
+  document.getElementById("eye-anchor").setAttribute("transform", `translate(${CW / 2} ${CH / 2})`);
+
+  /* ---------- build the SVG figure ---------- */
+  const hw = EYE_W / 2;
+  const hh = EYE_H / 2;
+  const R = (hw * hw + hh * hh) / (2 * hh); // vesica arc radius
+  const shape = document.getElementById("eye-shape");
+  shape.setAttribute("d", `M ${-hw} 0 A ${R} ${R} 0 0 1 ${hw} 0 A ${R} ${R} 0 0 1 ${-hw} 0 Z`);
+  shape.setAttribute("fill", EYE_RED);
+  const pupil = document.getElementById("pupil");
+  pupil.setAttribute("r", PUPIL_R);
+  pupil.setAttribute("cy", PUPIL_DY);
+
+  /* ---------- arc helpers ----------
+     Each swing is a quadratic Bézier S → B (lowest point) → E, control point chosen so the
+     curve passes through B at t = 0.5. Progress along the curve is split into two legs so the
+     lowest point lands exactly at the requested time; the second leg carries the spring ease.
+     Every tween is a plain GSAP property tween with a function ease — no callbacks, so every
+     frame is a pure function of time and seeks are exact. */
+  function quadArc(S, B, E) {
+    const P1 = { x: 2 * B.x - (S.x + E.x) / 2, y: 2 * B.y - (S.y + E.y) / 2 };
+    return (t) => {
+      const a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t;
+      return { x: a * S.x + b * P1.x + c * E.x, y: a * S.y + b * P1.y + c * E.y };
+    };
+  }
+  // Ease that moves a property along `curve[axis]` from curve(t0) to curve(t1) with inner ease g.
+  function legEase(curve, axis, t0, t1, g) {
+    const v0 = curve(t0)[axis];
+    const d = curve(t1)[axis] - v0;
+    return (u) => (d === 0 ? u : (curve(t0 + (t1 - t0) * g(u))[axis] - v0) / d);
+  }
+  function swing(tl, target, curve, at, dur, gIn, gOut, pupilFrom, pupilTo) {
+    const half = dur / 2;
+    const p0 = curve(0), pMid = curve(0.5), p1 = curve(1);
+    const legs = [
+      { t0: 0, t1: 0.5, g: gIn, at: at, from: p0, to: pMid },
+      { t0: 0.5, t1: 1, g: gOut, at: at + half, from: pMid, to: p1 },
+    ];
+    const xTotal = p1.x - p0.x;
+    let pupilCursor = pupilFrom;
+    for (const L of legs) {
+      const ex = legEase(curve, "x", L.t0, L.t1, L.g);
+      const ey = legEase(curve, "y", L.t0, L.t1, L.g);
+      tl.fromTo(target, { x: L.from.x }, { x: L.to.x, duration: half, ease: ex, immediateRender: false }, L.at);
+      tl.fromTo(target, { y: L.from.y }, { y: L.to.y, duration: half, ease: ey, immediateRender: false }, L.at);
+      // pupil tracks the eye's horizontal progress (same ease shape → synchronous)
+      const frac = (L.to.x - L.from.x) / xTotal;
+      const pupilNext = pupilCursor + (pupilTo - pupilFrom) * frac;
+      tl.fromTo(pupil, { x: pupilCursor }, { x: pupilNext, duration: half, ease: ex, immediateRender: false }, L.at);
+      pupilCursor = pupilNext;
+    }
+  }
+
+  /* ---------- timeline ---------- */
+  const START = { x: 0, y: 0 };
+  const eyePos = "#eye-pos";
+  const blink = "#eye-blink";
+  const tl = gsap.timeline({ paused: true });
+  // Resting state (== frame 0 == last frame, the loop seam)
+  tl.set(eyePos, { x: START.x, y: START.y }, 0);
+  tl.set(pupil, { x: PUPIL_DX }, 0);
+  tl.set(blink, { scaleY: 1, transformOrigin: "50% 50%" }, 0);
+
+  // Smooth, spring-free progress: ease-in to the bottom of the arc, ease-out into the stop.
+  const gIn = gsap.parseEase("power2.in");
+  const gOut = gsap.parseEase("power2.out");
+
+  const SWING = 0.3 * EYE_W; // 117 px — same distance left and right of the start
+  const DIP = 0.15 * EYE_H; // 31 px — depth of the arc through the bottom
+  const LEFT = { x: -SWING, y: 0 };
+  const RIGHT = { x: SWING, y: 0 };
+
+  // 0.0–1.0s  Movement 1: start → left, arc through the bottom (lowest point at 0.5s)
+  swing(tl, eyePos, quadArc(START, { x: -SWING / 2, y: DIP }, LEFT), 0, 1, gIn, gOut, PUPIL_DX, -PUPIL_DX);
+  // 1.0–2.0s  Movement 2: left → right (mirrored arc, lowest point under the start at 1.5s)
+  swing(tl, eyePos, quadArc(LEFT, { x: 0, y: DIP }, RIGHT), 1, 1, gIn, gOut, -PUPIL_DX, PUPIL_DX);
+  // 2.0–3.0s  Movement 3: right → start, straight, soft; pupil → centre ("looks at the viewer")
+  tl.fromTo(eyePos, { x: RIGHT.x }, { x: START.x, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+  tl.fromTo(eyePos, { y: RIGHT.y }, { y: START.y, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+  tl.fromTo(pupil, { x: PUPIL_DX }, { x: 0, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+  // 3.0–3.1s  Hold
+  // 3.1–3.3s  Blink close, 3.3–3.5s blink open — whole figure, about its own centre
+  const BLINK_AT = 3.1;
+  tl.fromTo(blink, { scaleY: 1, transformOrigin: "50% 50%" }, { scaleY: 0, duration: 0.2, ease: "power1.in", immediateRender: false }, BLINK_AT);
+  tl.fromTo(blink, { scaleY: 0, transformOrigin: "50% 50%" }, { scaleY: 1, duration: 0.2, ease: "power1.out", immediateRender: false }, BLINK_AT + 0.2);
+  // 3.5–4.1s  Pupil returns to the standard position → last frame == frame 0
+  tl.fromTo(pupil, { x: 0 }, { x: PUPIL_DX, duration: 0.6, ease: "power2.inOut", immediateRender: false }, BLINK_AT + 0.4);
+
+  tl.seek(0);
+  return tl;
+}

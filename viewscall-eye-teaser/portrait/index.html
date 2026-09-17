@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1080, height=540" />
-    <title>ViewsCall eye — loop</title>
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>ViewsCall eye — loop (portrait)</title>
     <script src="vendor/gsap.min.js"></script>
     <style>
       * {
@@ -38,11 +38,11 @@
   <body>
     <div
       id="root"
-      data-composition-id="main"
+      data-composition-id="main-portrait"
       data-start="0"
       data-duration="4.1"
       data-width="1080"
-      data-height="540"
+      data-height="1920"
       data-fps="50"
     >
       <section id="eye-scene" class="clip" data-start="0" data-duration="4.1" data-track-index="0">
@@ -51,10 +51,10 @@
             eye bbox   ≈ x 345..735, y 438..642  →  eye_w = 390, eye_h = 204  (eye_h/eye_w = 0.523)
             pupil      ≈ centre (614, 512), r 45  →  +0.18*eye_w right, −0.137*eye_h up, r = 0.115*eye_w
           The eye shape is a true vesica: two circular arcs of radius R = (eye_w²/4 + eye_h²/4) / eye_h.
-          Canvas 1080x540 keeps the eye at reference pixel size and leaves room for the swing
+          Canvas 1080x1920 (9:16 for TikTok / Reels / Shorts) keeps the eye at the same pixel size, centred, and leaves room for the swing
           (±0.3*eye_w sideways, +0.15*eye_h down at the bottom of each arc).
         -->
-        <svg id="stage" viewBox="0 0 1080 540" xmlns="http://www.w3.org/2000/svg" aria-label="ViewsCall eye">
+        <svg id="stage" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg" aria-label="ViewsCall eye">
           <g id="eye-anchor">
             <g id="eye-pos">
               <g id="eye-blink">
@@ -68,7 +68,7 @@
     </div>
     <script src="eye.js"></script>
     <script>
-      window.__timelines["main"] = buildEyeTimeline();
+      window.__timelines["main-portrait"] = buildEyeTimeline();
     </script>
   </body>
 </html>

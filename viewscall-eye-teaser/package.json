@@ -7,6 +7,8 @@
     "check": "npx --yes hyperframes@0.8.46 check",
     "render": "bash tools/render-gif.sh",
     "publish": "npx --yes hyperframes@0.8.46 publish",
-    "render:mp4": "npx --yes hyperframes@0.8.46 render"
+    "render:mp4": "npx --yes hyperframes@0.8.46 render",
+    "render:portrait": "npx --yes hyperframes@0.8.46 render portrait --format mp4 --fps 60 --quality delivery -o renders/viewscall-eye-loop-portrait-1080x1920.mp4",
+    "check:portrait": "npx --yes hyperframes@0.8.46 check portrait"
   }
 }
