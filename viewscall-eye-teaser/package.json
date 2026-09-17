@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "npx --yes hyperframes@0.8.46 preview",
     "check": "npx --yes hyperframes@0.8.46 check",
-    "render": "npx --yes hyperframes@0.8.46 render",
-    "publish": "npx --yes hyperframes@0.8.46 publish"
+    "render": "bash tools/render-gif.sh",
+    "publish": "npx --yes hyperframes@0.8.46 publish",
+    "render:mp4": "npx --yes hyperframes@0.8.46 render"
   }
 }

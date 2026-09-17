@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=540" />
-    <title>ViewsCall eye — 5s loop</title>
+    <title>ViewsCall eye — loop</title>
     <script src="vendor/gsap.min.js"></script>
     <style>
       * {
@@ -40,19 +40,19 @@
       id="root"
       data-composition-id="main"
       data-start="0"
-      data-duration="5"
+      data-duration="4.1"
       data-width="1080"
       data-height="540"
-      data-fps="20"
+      data-fps="50"
     >
-      <section id="eye-scene" class="clip" data-start="0" data-duration="5" data-track-index="0">
+      <section id="eye-scene" class="clip" data-start="0" data-duration="4.1" data-track-index="0">
         <!--
           Eye geometry is reconstructed from reference/ViewsCall_eye.png (1080x1080):
             eye bbox   ≈ x 345..735, y 438..642  →  eye_w = 390, eye_h = 204  (eye_h/eye_w = 0.523)
             pupil      ≈ centre (614, 512), r 45  →  +0.18*eye_w right, −0.137*eye_h up, r = 0.115*eye_w
           The eye shape is a true vesica: two circular arcs of radius R = (eye_w²/4 + eye_h²/4) / eye_h.
           Canvas 1080x540 keeps the eye at reference pixel size and leaves room for the swing
-          (−0.6*eye_w left with overshoot, +0.2*eye_w right, +0.3*eye_h down).
+          (±0.3*eye_w sideways, +0.15*eye_h down at the bottom of each arc).
         -->
         <svg id="stage" viewBox="0 0 1080 540" xmlns="http://www.w3.org/2000/svg" aria-label="ViewsCall eye">
           <g transform="translate(540 270)">
@@ -132,31 +132,35 @@
       const eyePos = "#eye-pos";
       const blink = "#eye-blink";
       const tl = gsap.timeline({ paused: true });
-      // Resting state (== frame 0 == frame 5.0, the loop seam)
+      // Resting state (== frame 0 == last frame, the loop seam)
       tl.set(eyePos, { x: START.x, y: START.y }, 0);
       tl.set(pupil, { x: PUPIL_DX }, 0);
       tl.set(blink, { scaleY: 1, transformOrigin: "50% 50%" }, 0);
 
-      const gIn = gsap.parseEase("power1.in"); // swoop from rest into the bottom of the arc
-      const gSpring = gsap.parseEase("back.out(1.7)"); // springy settle into the end position
+      // Smooth, spring-free progress: ease-in to the bottom of the arc, ease-out into the stop.
+      const gIn = gsap.parseEase("power2.in");
+      const gOut = gsap.parseEase("power2.out");
 
-      const LEFT = { x: -0.6 * EYE_W, y: 0 };
-      const OVER = { x: 0.2 * EYE_W, y: 0 };
+      const SWING = 0.3 * EYE_W; // 117 px — same distance left and right of the start
+      const DIP = 0.15 * EYE_H; // 31 px — depth of the arc through the bottom
+      const LEFT = { x: -SWING, y: 0 };
+      const RIGHT = { x: SWING, y: 0 };
 
-      // 0.0–1.0s  Movement 1: left via the bottom, lowest point (−0.5w, +0.3h) at 0.5s
-      swing(tl, eyePos, quadArc(START, { x: -0.5 * EYE_W, y: 0.3 * EYE_H }, LEFT), 0, 1, gIn, gSpring, PUPIL_DX, -PUPIL_DX);
-      // 1.0–2.0s  Movement 2: back right via the bottom (mirrored arc), overshoot to +0.2w
-      swing(tl, eyePos, quadArc(LEFT, { x: 0.1 * EYE_W, y: 0.3 * EYE_H }, OVER), 1, 1, gIn, gSpring, -PUPIL_DX, PUPIL_DX);
-      // 2.0–3.0s  Movement 3: overshoot → start, straight, soft; pupil → centre
-      tl.fromTo(eyePos, { x: OVER.x }, { x: START.x, duration: 1, ease: "power2.out", immediateRender: false }, 2);
-      tl.fromTo(eyePos, { y: OVER.y }, { y: START.y, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+      // 0.0–1.0s  Movement 1: start → left, arc through the bottom (lowest point at 0.5s)
+      swing(tl, eyePos, quadArc(START, { x: -SWING / 2, y: DIP }, LEFT), 0, 1, gIn, gOut, PUPIL_DX, -PUPIL_DX);
+      // 1.0–2.0s  Movement 2: left → right (mirrored arc, lowest point under the start at 1.5s)
+      swing(tl, eyePos, quadArc(LEFT, { x: 0, y: DIP }, RIGHT), 1, 1, gIn, gOut, -PUPIL_DX, PUPIL_DX);
+      // 2.0–3.0s  Movement 3: right → start, straight, soft; pupil → centre ("looks at the viewer")
+      tl.fromTo(eyePos, { x: RIGHT.x }, { x: START.x, duration: 1, ease: "power2.out", immediateRender: false }, 2);
+      tl.fromTo(eyePos, { y: RIGHT.y }, { y: START.y, duration: 1, ease: "power2.out", immediateRender: false }, 2);
       tl.fromTo(pupil, { x: PUPIL_DX }, { x: 0, duration: 1, ease: "power2.out", immediateRender: false }, 2);
-      // 3.0–4.0s  Hold (nothing scheduled)
-      // 4.0–4.2s  Blink close, 4.2–4.4s blink open — whole figure, about its own centre
-      tl.fromTo(blink, { scaleY: 1, transformOrigin: "50% 50%" }, { scaleY: 0, duration: 0.2, ease: "power1.in", immediateRender: false }, 4);
-      tl.fromTo(blink, { scaleY: 0, transformOrigin: "50% 50%" }, { scaleY: 1, duration: 0.2, ease: "power1.out", immediateRender: false }, 4.2);
-      // 4.4–5.0s  Pupil returns to the standard position → frame 5.0 == frame 0.0
-      tl.fromTo(pupil, { x: 0 }, { x: PUPIL_DX, duration: 0.6, ease: "power2.inOut", immediateRender: false }, 4.4);
+      // 3.0–3.1s  Hold
+      // 3.1–3.3s  Blink close, 3.3–3.5s blink open — whole figure, about its own centre
+      const BLINK_AT = 3.1;
+      tl.fromTo(blink, { scaleY: 1, transformOrigin: "50% 50%" }, { scaleY: 0, duration: 0.2, ease: "power1.in", immediateRender: false }, BLINK_AT);
+      tl.fromTo(blink, { scaleY: 0, transformOrigin: "50% 50%" }, { scaleY: 1, duration: 0.2, ease: "power1.out", immediateRender: false }, BLINK_AT + 0.2);
+      // 3.5–4.1s  Pupil returns to the standard position → last frame == frame 0
+      tl.fromTo(pupil, { x: 0 }, { x: PUPIL_DX, duration: 0.6, ease: "power2.inOut", immediateRender: false }, BLINK_AT + 0.4);
 
       window.__timelines["main"] = tl;
       tl.seek(0);
