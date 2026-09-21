@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>receipt — on-chain receipt</title></head>
+  <body>
+    <template>
+      <link rel="stylesheet" href="weekly.css" />
+      <style>
+        #root { position: absolute; inset: 0; overflow: hidden; }
+        #receipt-stage {
+          position: absolute; inset: 0;
+          padding: var(--safe-top) var(--safe-x) var(--safe-bottom);
+          display: flex; align-items: center; justify-content: center;
+        }
+        #receipt-window { position: relative; width: var(--receipt-w); height: var(--receipt-h); overflow: hidden; }
+        #receipt-slit {
+          position: absolute; left: 0; right: 0; top: 0; height: 26px; border-radius: 13px;
+          background: linear-gradient(180deg, #1a2327, #0b1012); border: 1px solid var(--line);
+          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6); z-index: 3;
+        }
+        #receipt-slit::after {
+          content: ""; position: absolute; right: 22px; top: 8px; width: 10px; height: 10px; border-radius: 50%;
+          background: var(--green); box-shadow: 0 0 12px var(--green);
+        }
+        #receipt-card {
+          position: absolute; left: 0; right: 0; top: 34px;
+          background: var(--card); border: 1px solid var(--line); border-bottom: 0;
+          padding: var(--receipt-pad);
+          font-family: var(--mono); font-size: var(--receipt-font); color: var(--text);
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+          background-image: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 6px);
+        }
+        #receipt-head { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; border-bottom: 2px dashed var(--line); margin-bottom: 8px; }
+        #receipt-title { font-family: var(--sans); font-weight: 800; font-size: var(--receipt-title); letter-spacing: -0.01em; white-space: nowrap; }
+        #receipt-tag { font-family: var(--mono); font-size: 20px; letter-spacing: 0.22em; color: var(--muted); text-transform: uppercase; }
+        .rl { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; padding: 17px 0; border-bottom: 1px dashed rgba(31, 42, 47, 0.9); }
+        .rl:last-child { border-bottom: 0; }
+        .rl .k { color: var(--muted); font-weight: 500; white-space: nowrap; }
+        .rl .v { color: var(--green); font-weight: 700; white-space: nowrap; }
+        .rl .v.plain { color: var(--text); }
+        #receipt-stampzone { position: relative; height: var(--receipt-stampzone); }
+        #receipt-foot { margin-top: 8px; padding-top: 18px; border-top: 2px dashed var(--line); font-size: 20px; color: var(--muted-2); letter-spacing: 0.14em; text-transform: uppercase; display: flex; justify-content: space-between; }
+        #receipt-zig { height: 14px; margin: 0 -60px -32px; background:
+            linear-gradient(135deg, var(--card) 50%, transparent 50%) 0 0 / 28px 28px,
+            linear-gradient(-135deg, var(--card) 50%, transparent 50%) 0 0 / 28px 28px; }
+        #receipt-stamp {
+          position: absolute; right: 6px; top: 22px; z-index: 2;
+          padding: 14px 26px; border: 6px solid var(--green); border-radius: 14px;
+          font-family: var(--sans); font-weight: 900; font-size: var(--receipt-stamp); letter-spacing: 0.06em; color: var(--green);
+          text-transform: uppercase; white-space: nowrap;
+          box-shadow: inset 0 0 0 2px rgba(110, 239, 0, 0.35), 0 0 30px rgba(110, 239, 0, 0.25);
+          background: rgba(10, 14, 16, 0.55);
+        }
+        #receipt-stamp-ink { position: absolute; inset: 0; background: rgba(110, 239, 0, 0.18); pointer-events: none; opacity: 0; }
+      </style>
+      <div id="root" data-composition-id="receipt" data-width="1080" data-height="1080">
+        <div id="receipt-stage">
+          <div id="receipt-window">
+            <div id="receipt-slit"></div>
+            <div id="receipt-card" data-layout-allow-overflow>
+              <div id="receipt-head">
+                <div id="receipt-title"></div>
+                <div id="receipt-tag">receipt</div>
+              </div>
+              <div id="receipt-lines"></div>
+              <div id="receipt-stampzone"><div id="receipt-stamp">On-chain &#10003;</div></div>
+              <div id="receipt-foot"><span>talex treasury</span><span>bnb chain</span></div>
+              <div id="receipt-zig"></div>
+              <div id="receipt-stamp-ink"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          var W = window.Weekly, S = W.schedule, D = W.data, d = W.derived;
+          var T0 = S.scenes.receipt.start;
+          var FEED = S.receiptFeedAt - T0, LINE0 = S.receiptLine0At - T0, GAP = S.receiptLineGap;
+          var STAMP = S.stampAt - T0, OUT = S.receiptOutAt - T0;
+
+          document.getElementById("receipt-title").textContent = "TALEX TREASURY — WEEK #" + W.fmt.int(D.week);
+          var rows = [
+            ["Date", D.date, "plain"],
+            ["$X bought & injected", d.xInjected],
+            ["BNB injected", d.bnbInjected],
+            ["Price", d.priceUsd],
+            ["Revenue allocated", d.revenuePct],
+            ["TX", d.txShort],
+          ];
+          var host = document.getElementById("receipt-lines");
+          rows.forEach(function (r, i) {
+            var row = document.createElement("div");
+            row.className = "rl";
+            row.id = "receipt-row-" + i;
+            var k = document.createElement("span"); k.className = "k"; k.textContent = r[0];
+            var v = document.createElement("span"); v.className = "v" + (r[2] ? " " + r[2] : ""); v.textContent = r[1];
+            row.appendChild(k); row.appendChild(v);
+            host.appendChild(row);
+          });
+          var winH = W.isPortrait ? 980 : 820; // must match --receipt-h in weekly.css
+
+          var tl = gsap.timeline({ paused: true });
+          tl.fromTo("#receipt-slit", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.2, ease: "power2.out" }, 0);
+          // paper feed: the card rolls out of the slit
+          tl.fromTo("#receipt-card", { y: -winH, rotation: 0 }, { y: 0, rotation: 0, duration: 0.62, ease: "power2.out" }, FEED + 0.02);
+          // lines print one by one (title first, then each row)
+          tl.fromTo("#receipt-head", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.14, ease: "power2.out" }, LINE0);
+          rows.forEach(function (_, i) {
+            tl.fromTo("#receipt-row-" + i, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.14, ease: "power2.out" }, LINE0 + (i + 1) * GAP);
+          });
+          tl.fromTo("#receipt-foot", { opacity: 0 }, { opacity: 1, duration: 0.14 }, LINE0 + (rows.length + 1) * GAP);
+          // stamp slams on
+          tl.fromTo("#receipt-stamp", { opacity: 0, scale: 3.2, rotation: -10 }, { opacity: 1, scale: 1, rotation: -10, duration: 0.16, ease: "power4.in" }, STAMP - 0.16);
+          tl.fromTo("#receipt-stamp-ink", { opacity: 0.9 }, { opacity: 0, duration: 0.3, ease: "power2.out", immediateRender: false }, STAMP);
+          tl.fromTo("#receipt-window", { y: 0 }, { y: 8, duration: 0.05, ease: "none" }, STAMP);
+          tl.to("#receipt-window", { y: -4, duration: 0.05, ease: "none" }, STAMP + 0.05);
+          tl.to("#receipt-window", { y: 0, duration: 0.06, ease: "none" }, STAMP + 0.1);
+          tl.to("#receipt-stamp", { scale: 1.04, duration: 0.12, ease: "sine.inOut", yoyo: true, repeat: 1 }, STAMP + 0.1);
+          // receipt flies out of frame
+          tl.to("#receipt-card", { y: -1500, rotation: -5, duration: 0.38, ease: "power3.in" }, OUT);
+          tl.to("#receipt-slit", { opacity: 0, duration: 0.16 }, OUT + 0.2);
+          window.__timelines["receipt"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

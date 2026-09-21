@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>holders — Active holders chart</title></head>
+  <body>
+    <template>
+      <link rel="stylesheet" href="weekly.css" />
+      <style>
+        #root { position: absolute; inset: 0; overflow: hidden; }
+        #holders-stage {
+          position: absolute; inset: 0;
+          padding: var(--safe-top) var(--safe-x) var(--safe-bottom);
+          display: flex; align-items: center; justify-content: center;
+        }
+        #holders-card {
+          position: relative; width: 936px; padding: var(--holders-card-pad);
+          background: linear-gradient(180deg, #111a1d 0%, #0e1517 100%);
+          border: 1px solid var(--line); border-radius: 22px;
+          box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+        #holders-head { display: flex; flex-direction: var(--holders-head-dir); justify-content: space-between; align-items: flex-start; gap: 20px; }
+        #holders-title { font-family: var(--sans); font-weight: 700; font-size: var(--holders-title); letter-spacing: -0.02em; color: var(--text); }
+        #holders-subtitle { margin-top: 8px; font-family: var(--sans); font-weight: 500; font-size: var(--holders-sub); color: var(--muted); }
+        #holders-legend { margin-top: 18px; display: var(--holders-legend); align-items: center; gap: 12px; font-family: var(--sans); font-weight: 500; font-size: 22px; color: var(--muted); }
+        #holders-legend i { display: block; width: 30px; height: 4px; border-radius: 2px; background: var(--green); }
+        #holders-countbox { text-align: var(--holders-count-align); margin-top: var(--holders-count-mt); }
+        #holders-count { font-family: var(--mono); font-weight: 800; font-size: var(--holders-count); line-height: 1; color: var(--green); letter-spacing: -0.03em; text-shadow: 0 0 30px rgba(110, 239, 0, 0.3); white-space: nowrap; }
+        #holders-countlabel { margin-top: 8px; font-family: var(--mono); font-size: 20px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+        #holders-chartbox { margin-top: var(--holders-chart-mt); }
+        #holders-chart { display: block; width: 100%; height: auto; overflow: visible; }
+        #holders-chart .grid { stroke: rgba(255, 255, 255, 0.07); stroke-width: 1; }
+        #holders-chart .ylab { font-family: var(--mono); font-size: 20px; fill: var(--muted); }
+        #holders-chart .xlab { font-family: var(--mono); font-size: var(--holders-xlab); fill: var(--muted); text-anchor: middle; }
+        #holders-chart .line { fill: none; stroke: var(--green); stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; }
+        #holders-chart .pt { fill: var(--green); stroke: #0e1517; stroke-width: 3; }
+        #holders-chart .ring { fill: none; stroke: var(--green); stroke-width: 3; }
+        #holders-chartbox { position: relative; }
+        #holders-badge {
+          position: absolute; left: 92px; top: 6px;
+          display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+        }
+        #holders-badge-pill {
+          display: block; padding: var(--holders-pill-pad); border-radius: 999px; background: var(--green); color: #06110a;
+          font-family: var(--sans); font-weight: 800; font-size: var(--holders-pill); letter-spacing: -0.01em; white-space: nowrap;
+          box-shadow: 0 10px 40px rgba(110, 239, 0, 0.35);
+        }
+        #holders-badge-net { display: block; padding-left: 8px; font-family: var(--mono); font-weight: 700; font-size: var(--holders-net); color: var(--green); }
+        #holders-badge-net small { font-family: var(--sans); font-weight: 500; font-size: 22px; color: var(--muted); margin-left: 8px; }
+
+        /* 9:16 re-layout (stacked header, taller chart) comes from the --holders-* variables in weekly.css */
+      </style>
+      <div id="root" data-composition-id="holders" data-width="1080" data-height="1080">
+        <div id="holders-stage">
+          <div id="holders-card">
+            <div id="holders-head">
+              <div>
+                <div id="holders-title">Active holders</div>
+                <div id="holders-subtitle">Monthly active holders on BNB Chain with $X activity.</div>
+                <div id="holders-legend"><i></i><span>BNB Chain</span></div>
+              </div>
+              <div id="holders-countbox">
+                <div id="holders-count">0</div>
+                <div id="holders-countlabel">active holders</div>
+              </div>
+            </div>
+            <div id="holders-chartbox">
+              <svg id="holders-chart" xmlns="http://www.w3.org/2000/svg"></svg>
+              <div id="holders-badge">
+                <span id="holders-badge-pill"></span>
+                <span id="holders-badge-net"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          var W = window.Weekly, S = W.schedule, D = W.data, d = W.derived, fmt = W.fmt;
+          var T0 = S.scenes.holders.start;
+          var IN = S.chartInAt - T0, BASE = S.baselineAt - T0, OUT = S.chartOutAt - T0, BADGE = S.badgeAt - T0;
+          var steps = S.steps.map(function (t) { return t - T0; });
+          var H = D.holders;
+          var n = H.length;
+
+          // ---- chart geometry (pre-computed constants, no DOM measuring)
+          var VW = 848, VH = W.isPortrait ? 560 : 400;
+          var padL = 84, padR = 28, padT = 26, padB = 56;
+          var x0 = padL, x1 = VW - padR, y0 = padT, y1 = VH - padB;
+
+          // auto-scaled Y axis with "nice" ticks
+          var vals = H.map(function (h) { return h.value; });
+          var vmin = Math.min.apply(null, vals), vmax = Math.max.apply(null, vals);
+          var range = Math.max(1, vmax - vmin);
+          var lo = vmin - range * 0.12, hi = vmax + range * 0.12;
+          var niceSteps = [1, 2, 2.5, 5];
+          var rawStep = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(rawStep))), step = mag;
+          for (var q = 0; q < niceSteps.length; q++) { if (niceSteps[q] * mag >= rawStep) { step = niceSteps[q] * mag; break; } step = 10 * mag; }
+          var yMin = Math.floor(lo / step) * step; if (yMin < 0 && vmin >= 0) yMin = 0;
+          var yMax = Math.ceil(hi / step) * step; if (yMax <= yMin) yMax = yMin + step;
+          var sx = function (i) { return x0 + (n === 1 ? 0 : (x1 - x0) * i / (n - 1)); };
+          var sy = function (v) { return y1 - (y1 - y0) * (v - yMin) / (yMax - yMin); };
+          var pts = H.map(function (h, i) { return { x: sx(i), y: sy(h.value) }; });
+
+          var NS = "http://www.w3.org/2000/svg";
+          var svg = document.getElementById("holders-chart");
+          svg.setAttribute("viewBox", "0 0 " + VW + " " + VH);
+          function el(tag, attrs, parent) {
+            var e = document.createElementNS(NS, tag);
+            for (var k in attrs) e.setAttribute(k, attrs[k]);
+            (parent || svg).appendChild(e);
+            return e;
+          }
+          var defs = el("defs", {});
+          var grad = el("linearGradient", { id: "holders-area-grad", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+          el("stop", { offset: "0%", "stop-color": "#6eef00", "stop-opacity": 0.42 }, grad);
+          el("stop", { offset: "100%", "stop-color": "#6eef00", "stop-opacity": 0.02 }, grad);
+          var clip = el("clipPath", { id: "holders-reveal" }, defs);
+          var clipRect = el("rect", { x: x0 - 8, y: 0, width: 0, height: VH }, clip);
+
+          // grid + y labels
+          for (var v = yMin; v <= yMax + 1e-6; v += step) {
+            var yy = sy(v);
+            el("line", { class: "grid", x1: x0, y1: yy, x2: x1, y2: yy });
+            el("text", { class: "ylab", x: x0 - 16, y: yy + 7, "text-anchor": "end" }).textContent = fmt.k(v);
+          }
+          el("line", { class: "grid", x1: x0, y1: y0, x2: x0, y2: y1 });
+
+          // area + line (revealed by the clip rect, step by step)
+          var lineD = pts.map(function (p, i) { return (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1); }).join(" ");
+          var areaD = lineD + " L" + pts[n - 1].x.toFixed(1) + " " + y1 + " L" + pts[0].x.toFixed(1) + " " + y1 + " Z";
+          var g = el("g", { "clip-path": "url(#holders-reveal)" });
+          el("path", { d: areaD, fill: "url(#holders-area-grad)" }, g);
+          el("path", { class: "line", d: lineD }, g);
+
+          // points, flash rings, day labels
+          var ptEls = [], ringEls = [], labEls = [];
+          H.forEach(function (h, i) {
+            var ring = el("circle", { class: "ring", cx: pts[i].x, cy: pts[i].y, r: 14, opacity: 0 });
+            var c = el("circle", { class: "pt", cx: pts[i].x, cy: pts[i].y, r: 9, opacity: 0 });
+            var t = el("text", { class: "xlab", x: pts[i].x, y: y1 + 40, opacity: 0 });
+            t.textContent = h.label;
+            ptEls.push(c); ringEls.push(ring); labEls.push(t);
+          });
+
+          // badge + counter text
+          document.getElementById("holders-badge-pill").textContent = d.growthLabel + " this week";
+          document.getElementById("holders-badge-net").innerHTML = d.netChangeLabel + "<small>holders</small>";
+          // badge corner: top-left when the line starts low (growth), top-right when it ends low, else centered
+          var badge = document.getElementById("holders-badge");
+          var mid = (y0 + y1) / 2;
+          var badgeAlign = "left";
+          if (pts[0].y < mid && pts[n - 1].y >= mid) badgeAlign = "right";
+          else if (pts[0].y < mid) badgeAlign = "center";
+          if (badgeAlign === "right") { badge.style.left = "auto"; badge.style.right = (padR + 8) + "px"; badge.style.alignItems = "flex-end"; }
+          if (badgeAlign === "center") { badge.style.left = "50%"; badge.style.transform = ""; badge.style.marginLeft = "-160px"; }
+          var badgeOrigin = badgeAlign === "right" ? "100% 50%" : "0% 50%";
+          var countEl = document.getElementById("holders-count");
+          var counter = { v: H[0].value };
+          var renderCount = function () { countEl.textContent = fmt.int(counter.v); };
+          renderCount();
+
+          var tl = gsap.timeline({ paused: true });
+          tl.fromTo("#holders-card", { opacity: 0, y: 40, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "power3.out" }, IN);
+          tl.fromTo("#holders-countbox", { opacity: 0 }, { opacity: 1, duration: 0.2 }, IN + 0.1);
+
+          var flashPoint = function (i, at) {
+            tl.fromTo(ptEls[i], { opacity: 1, scale: 0 }, { scale: 1, duration: 0.22, ease: "back.out(3)", transformOrigin: "50% 50%" }, at);
+            tl.fromTo(ringEls[i], { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.6, duration: 0.36, ease: "power2.out", transformOrigin: "50% 50%", immediateRender: false }, at);
+            tl.fromTo(labEls[i], { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.18, ease: "power2.out" }, at + 0.02);
+          };
+          // baseline point (last week's closing value)
+          tl.fromTo(clipRect, { attr: { width: 0 } }, { attr: { width: 16 }, duration: 0.05, ease: "none" }, BASE);
+          flashPoint(0, BASE);
+          // day-by-day steps: extend the line to the next point, flash it, jump the counter
+          for (var i = 1; i < n; i++) {
+            var at = steps[i - 1];
+            var segDur = Math.min(0.16, Math.max(0.06, S.stepInterval * 0.45));
+            tl.to(clipRect, { attr: { width: pts[i].x - (x0 - 8) + 8 }, duration: segDur, ease: "power1.inOut" }, at - segDur);
+            flashPoint(i, at);
+            tl.to(counter, { v: H[i].value, duration: Math.min(0.16, S.stepInterval * 0.5), ease: "power2.out", snap: "v", onUpdate: renderCount }, at - 0.04);
+            tl.fromTo("#holders-count", { scale: 1.06 }, { scale: 1, duration: 0.22, ease: "power2.out", transformOrigin: W.isPortrait ? "0% 50%" : "100% 50%", immediateRender: false }, at);
+          }
+          // growth badge pops in when the last point has landed
+          tl.fromTo("#holders-badge", { opacity: 0, scale: 0.5, y: 10 }, { opacity: 1, scale: 1, y: 0, duration: 0.34, ease: "back.out(2.2)", transformOrigin: badgeOrigin }, BADGE);
+          tl.fromTo("#holders-badge-net", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.24, ease: "power2.out" }, BADGE + 0.12);
+          // chart clears
+          tl.to("#holders-card", { opacity: 0, scale: 0.94, y: -20, duration: 0.24, ease: "power2.in" }, OUT);
+          window.__timelines["holders"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

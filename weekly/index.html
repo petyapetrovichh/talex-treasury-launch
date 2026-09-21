@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-resolution="square" data-format="square">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1080" />
+    <title>TaleX Weekly Buyback — 1:1</title>
+    <script src="vendor/gsap.min.js"></script>
+    <script src="data/week.js"></script>
+    <script src="src/weekly.js"></script>
+    <link rel="stylesheet" href="weekly.css" />
+    <style>
+      html, body { width: 1080px; height: 1080px; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+      .clip { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="12" data-width="1080" data-height="1080" data-fps="30">
+      <div id="scene-bg" class="clip" data-composition-id="bg" data-composition-src="compositions/bg.html"
+           data-start="0" data-duration="12" data-track-index="0" data-width="1080" data-height="1080"></div>
+      <div id="scene-counter" class="clip" data-composition-id="counter" data-composition-src="compositions/counter.html"
+           data-start="0" data-duration="2" data-track-index="1" data-width="1080" data-height="1080"></div>
+      <div id="scene-receipt" class="clip" data-composition-id="receipt" data-composition-src="compositions/receipt.html"
+           data-start="2" data-duration="3" data-track-index="1" data-width="1080" data-height="1080"></div>
+      <div id="scene-holders" class="clip" data-composition-id="holders" data-composition-src="compositions/holders.html"
+           data-start="5" data-duration="4" data-track-index="1" data-width="1080" data-height="1080"></div>
+      <div id="scene-finale" class="clip" data-composition-id="finale" data-composition-src="compositions/finale.html"
+           data-start="9" data-duration="3" data-track-index="1" data-width="1080" data-height="1080"></div>
+
+      <!-- music bed: generated (or override) by scripts/weekly.mjs; fades + ducks are baked in -->
+      <audio id="music" src="audio/_build/music.mp3" data-start="0" data-duration="12" data-track-index="10" data-volume="0.8"></audio>
+      <!-- signature hit: full punch on the Counter Slam, softer on the receipt stamp (times = src/schedule.mjs SLAM_AT / STAMP_AT) -->
+      <audio id="hit-slam" src="audio/hit.mp3" data-start="0.96" data-duration="0.7" data-track-index="11" data-volume="1"></audio>
+      <audio id="hit-stamp" src="audio/hit.mp3" data-start="4.08" data-duration="0.7" data-track-index="11" data-volume="0.45"></audio>
+    </div>
+    <script>
+      // The root owns no motion of its own: every scene is a sub-composition
+      // with its own timeline, which the runtime nests automatically.
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

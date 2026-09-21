@@ -1,0 +1,8 @@
+{
+  "name": "talex-treasury-launch",
+  "private": true,
+  "scripts": {
+    "weekly": "npm --prefix weekly run weekly",
+    "check": "npm --prefix weekly run check"
+  }
+}

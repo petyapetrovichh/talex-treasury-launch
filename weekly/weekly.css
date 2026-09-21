@@ -1,0 +1,97 @@
+/* TaleX weekly — shared design tokens (matches the Treasury Dashboard page) */
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 500; font-display: block; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 600; font-display: block; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 700; font-display: block; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 800; font-display: block; src: url("assets/fonts/inter-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 900; font-display: block; src: url("assets/fonts/inter-latin-900-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 500; font-display: block; src: url("assets/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 700; font-display: block; src: url("assets/fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 800; font-display: block; src: url("assets/fonts/jetbrains-mono-latin-800-normal.woff2") format("woff2"); }
+
+:root {
+  --bg: #0a0e10;
+  --bg-2: #0c1214;
+  --card: #0f1517;
+  --card-2: #121a1d;
+  --line: #1f2a2f;
+  --text: #f2f5f6;
+  --muted: #94a1a9;
+  --muted-2: #5f6b72;
+  --green: #6eef00;
+  --green-dim: #4fb300;
+  --green-glow: rgba(110, 239, 0, 0.45);
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --safe-x: 72px;
+  --safe-top: 72px;
+  --safe-bottom: 72px;
+
+  /* Format-specific sizing lives here (custom properties inherit into every
+     scene; selectors inside sub-compositions are scoped by the runtime). */
+  --counter-size: 236px;      /* also mirrored in compositions/counter.html (fontPx) */
+  --counter-kicker: 26px;
+  --counter-sub: 44px;
+  --receipt-w: 680px;
+  --receipt-h: 820px;         /* also mirrored in compositions/receipt.html (winH) */
+  --receipt-font: 30px;
+  --receipt-pad: 40px 44px 26px;
+  --receipt-title: 34px;
+  --receipt-stampzone: 128px;
+  --receipt-stamp: 50px;
+  --holders-card-pad: 40px 44px 36px;
+  --holders-head-dir: row;
+  --holders-count-align: right;
+  --holders-count-mt: 0px;
+  --holders-count: 112px;
+  --holders-title: 46px;
+  --holders-sub: 24px;
+  --holders-legend: flex;
+  --holders-chart-mt: 24px;
+  --holders-xlab: 21px;
+  --holders-pill: 40px;
+  --holders-pill-pad: 14px 26px;
+  --holders-net: 30px;
+  --finale-week: 96px;
+  --finale-label: 34px;
+  --finale-total: 168px;
+  --finale-logo-mt: 54px;
+  --finale-logo-w: 440px;
+  --finale-logo-h: 74px;
+}
+html[data-format="portrait"] {
+  --safe-x: 72px;
+  --safe-top: 250px;   /* platform UI (Shorts / Reels / TikTok) */
+  --safe-bottom: 340px;
+  --counter-size: 210px;
+  --counter-kicker: 28px;
+  --counter-sub: 48px;
+  --receipt-w: 820px;
+  --receipt-h: 980px;
+  --receipt-font: 35px;
+  --receipt-pad: 48px 52px 30px;
+  --receipt-title: 40px;
+  --receipt-stampzone: 156px;
+  --receipt-stamp: 58px;
+  --holders-card-pad: 46px 44px 40px;
+  --holders-head-dir: column;
+  --holders-count-align: left;
+  --holders-count-mt: 26px;
+  --holders-count: 150px;
+  --holders-title: 52px;
+  --holders-sub: 27px;
+  --holders-legend: none;
+  --holders-chart-mt: 34px;
+  --holders-xlab: 22px;
+  --holders-pill: 46px;
+  --holders-pill-pad: 16px 30px;
+  --holders-net: 34px;
+  --finale-week: 110px;
+  --finale-label: 38px;
+  --finale-total: 176px;
+  --finale-logo-mt: 90px;
+  --finale-logo-w: 500px;
+  --finale-logo-h: 84px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }

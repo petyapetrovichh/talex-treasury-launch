@@ -1,0 +1,21 @@
+{
+  "week": 2,
+  "date": "Sep 21, 2026",
+  "buyback_usd": 1258,
+  "x_injected": 46219,
+  "bnb_injected": 0.809,
+  "price_usd": 0.0136,
+  "revenue_pct": 100,
+  "tx_hash": "0x639d104ad7bcf9925a433fba4a80542a6c6cfa3ec943f5f252b680f9baf1cb79",
+  "cumulative_usd": 2332,
+  "holders": [
+    { "label": "Sep 14", "value": 8067 },
+    { "label": "Sep 15", "value": 8134 },
+    { "label": "Sep 16", "value": 8185 },
+    { "label": "Sep 17", "value": 8359 },
+    { "label": "Sep 18", "value": 8873 },
+    { "label": "Sep 19", "value": 9892 },
+    { "label": "Sep 20", "value": 10913 },
+    { "label": "Sep 21", "value": 11928 }
+  ]
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>finale — cumulative total + logo</title></head>
+  <body>
+    <template>
+      <link rel="stylesheet" href="weekly.css" />
+      <style>
+        #root { position: absolute; inset: 0; overflow: hidden; }
+        #finale-wrap {
+          position: absolute; inset: 0;
+          padding: var(--safe-top) var(--safe-x) var(--safe-bottom);
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center;
+        }
+        #finale-week { font-family: var(--sans); font-weight: 800; font-size: var(--finale-week); letter-spacing: -0.03em; color: var(--text); line-height: 1; }
+        #finale-label { font-family: var(--sans); font-weight: 600; font-size: var(--finale-label); color: var(--muted); letter-spacing: 0.01em; margin-top: 14px; }
+        #finale-total { font-family: var(--mono); font-weight: 800; font-size: var(--finale-total); line-height: 1; color: var(--green); letter-spacing: -0.03em; text-shadow: 0 0 40px rgba(110, 239, 0, 0.35); white-space: nowrap; }
+        #finale-logo-box { position: relative; margin-top: var(--finale-logo-mt); width: var(--finale-logo-w); height: var(--finale-logo-h); }
+        #finale-logo-glow { position: absolute; left: 50%; top: 50%; width: 900px; height: 500px; margin: -250px 0 0 -450px; border-radius: 50%; background: radial-gradient(ellipse, rgba(110, 239, 0, 0.35) 0%, rgba(110, 239, 0, 0) 60%); }
+        #finale-logo { position: absolute; left: 0; top: 0; width: var(--finale-logo-w); height: var(--finale-logo-h); display: block; object-fit: contain; }
+      </style>
+      <div id="root" data-composition-id="finale" data-width="1080" data-height="1080">
+        <div id="finale-wrap">
+          <div id="finale-week"></div>
+          <div id="finale-label">Total bought back</div>
+          <div id="finale-total">$0</div>
+          <div id="finale-logo-box">
+            <div id="finale-logo-glow" data-layout-allow-overflow></div>
+            <img id="finale-logo" src="assets/talex-logo.png" alt="TaleX" />
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          var W = window.Weekly, S = W.schedule, D = W.data, d = W.derived, fmt = W.fmt;
+          var T0 = S.scenes.finale.start;
+          var WEEK = S.weekTitleAt - T0, LABEL = S.totalLabelAt - T0, C0 = S.countupStart - T0, C1 = S.countupEnd - T0, LOGO = S.logoAt - T0;
+
+          document.getElementById("finale-week").textContent = d.weekLabel;
+          var totalEl = document.getElementById("finale-total");
+          var counter = { v: 0 };
+          var render = function () { totalEl.textContent = fmt.usd(counter.v); };
+          render();
+
+          var tl = gsap.timeline({ paused: true });
+          tl.fromTo("#finale-week", { opacity: 0, y: 30, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.36, ease: "power3.out" }, WEEK);
+          tl.fromTo("#finale-label", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.26, ease: "power2.out" }, LABEL);
+          tl.fromTo("#finale-total", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.24, ease: "power2.out" }, C0 - 0.08);
+          tl.to(counter, { v: D.cumulative_usd, duration: C1 - C0, ease: "power2.out", snap: "v", onUpdate: render }, C0);
+          tl.fromTo("#finale-total", { scale: 1.06 }, { scale: 1, duration: 0.3, ease: "back.out(2)", immediateRender: false }, C1 - 0.02);
+          // logo lands and holds to the end
+          tl.fromTo("#finale-logo", { opacity: 0, scale: 1.6, y: 10 }, { opacity: 1, scale: 1, y: 0, duration: 0.42, ease: "power4.out" }, LOGO);
+          tl.fromTo("#finale-logo-glow", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.2, ease: "power2.out" }, LOGO);
+          tl.to("#finale-logo-glow", { opacity: 0.45, scale: 1.15, duration: 0.8, ease: "power2.out" }, LOGO + 0.2);
+          window.__timelines["finale"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

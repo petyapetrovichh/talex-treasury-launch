@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>counter — buyback slam</title></head>
+  <body>
+    <template>
+      <link rel="stylesheet" href="weekly.css" />
+      <style>
+        #root { position: absolute; inset: 0; overflow: hidden; }
+        #counter-wrap {
+          position: absolute; inset: 0;
+          padding: var(--safe-top) var(--safe-x) var(--safe-bottom);
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          gap: 28px; text-align: center;
+        }
+        #counter-kicker {
+          font-family: var(--mono); font-weight: 500; font-size: var(--counter-kicker); letter-spacing: 0.28em;
+          color: var(--muted); text-transform: uppercase;
+        }
+        #counter-stage { position: relative; display: block; }
+        #counter-glow {
+          position: absolute; left: 50%; top: 50%; width: 1100px; height: 1100px; margin: -550px 0 0 -550px;
+          border-radius: 50%; pointer-events: none;
+          background: radial-gradient(circle, rgba(110, 239, 0, 0.55) 0%, rgba(110, 239, 0, 0.18) 30%, rgba(110, 239, 0, 0) 62%);
+        }
+        #counter-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 46%, rgba(220, 255, 190, 0.95) 0%, rgba(110, 239, 0, 0.45) 26%, rgba(110, 239, 0, 0) 62%); }
+        #counter-number {
+          position: relative; display: block;
+          font-family: var(--mono); font-weight: 800; font-size: var(--counter-size); line-height: 1; white-space: nowrap;
+          color: var(--green); filter: drop-shadow(0 0 22px rgba(110, 239, 0, 0.4));
+          letter-spacing: -0.02em;
+        }
+        #counter-number .ch { display: inline-block; width: 0.6em; height: 1em; overflow: hidden; vertical-align: top; text-align: center; }
+        #counter-number .ch.sym { width: 0.6em; }
+        #counter-number .strip { display: block; width: 100%; }
+        #counter-number .strip span { display: block; height: 1em; line-height: 1em; }
+        #counter-sub {
+          font-family: var(--sans); font-weight: 600; font-size: var(--counter-sub); color: var(--text); letter-spacing: -0.01em;
+        }
+        #counter-sub b { color: var(--green); font-weight: 800; }
+      </style>
+      <div id="root" data-composition-id="counter" data-width="1080" data-height="1080">
+        <div id="counter-flash"></div>
+        <div id="counter-wrap">
+          <div id="counter-kicker">TaleX Treasury · Weekly buyback</div>
+          <div id="counter-stage">
+            <div id="counter-glow" data-layout-allow-overflow></div>
+            <div id="counter-number"></div>
+          </div>
+          <div id="counter-sub"></div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          var W = window.Weekly, S = W.schedule, d = W.derived;
+          var SLAM = S.slamAt, SUB = S.sublineAt, END = S.scenes.counter.end;
+          var fontPx = W.isPortrait ? 210 : 236; // must match --counter-size in weekly.css (1em = one digit row)
+
+          // Build the slot-machine digits from the formatted buyback amount.
+          var text = d.buybackUsd; // e.g. "$1,258"
+          var host = document.getElementById("counter-number");
+          var strips = [];
+          var slotIndex = 0;
+          for (var i = 0; i < text.length; i++) {
+            var c = text[i];
+            var cell = document.createElement("span");
+            cell.className = "ch" + (/\d/.test(c) ? "" : " sym");
+            cell.setAttribute("data-layout-allow-overflow", ""); // the digit strip intentionally scrolls through the slot
+            if (/\d/.test(c)) {
+              var digit = +c;
+              var cycles = 2 + (slotIndex % 3);               // different spin lengths per column
+              var count = cycles * 10 + digit + 1;             // strip ends on the final digit
+              var strip = document.createElement("span");
+              strip.className = "strip";
+              strip.setAttribute("data-layout-allow-overflow", "");
+              for (var k = 0; k < count; k++) {
+                var s = document.createElement("span");
+                s.textContent = String(k % 10);
+                strip.appendChild(s);
+              }
+              cell.appendChild(strip);
+              strips.push({ el: strip, travel: -(count - 1) * fontPx });
+              slotIndex++;
+            } else {
+              cell.textContent = c;
+            }
+            host.appendChild(cell);
+          }
+          document.getElementById("counter-sub").innerHTML =
+            d.revenuePct + " of revenue → <b>$X</b>";
+
+          var tl = gsap.timeline({ paused: true });
+          // kicker + number container fade in fast
+          tl.fromTo("#counter-kicker", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0.06);
+          tl.fromTo("#counter-number", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.24, ease: "power2.out" }, 0.08);
+          // slot spin: every column lands exactly on the hit
+          var spinStart = 0.12;
+          strips.forEach(function (s) {
+            tl.fromTo(s.el, { y: 0 }, { y: s.travel, duration: SLAM - spinStart, ease: "power3.out" }, spinStart);
+          });
+          // impact: scale punch + glow pulse + flash + shake, all at SLAM
+          tl.fromTo("#counter-number", { scale: 1.14 }, { scale: 1, duration: 0.42, ease: "back.out(3)", immediateRender: false }, SLAM);
+          tl.fromTo("#counter-glow", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.12, ease: "power2.out" }, SLAM);
+          tl.to("#counter-glow", { opacity: 0.35, scale: 1.25, duration: 0.6, ease: "power2.out" }, SLAM + 0.12);
+          tl.fromTo("#counter-flash", { opacity: 0.75, scale: 0.7 }, { opacity: 0, scale: 1.3, duration: 0.3, ease: "power2.out", immediateRender: false }, SLAM);
+          tl.fromTo("#counter-wrap", { x: 0, y: 0 }, { x: -10, y: 6, duration: 0.04, ease: "none" }, SLAM);
+          tl.to("#counter-wrap", { x: 9, y: -5, duration: 0.04, ease: "none" }, SLAM + 0.04);
+          tl.to("#counter-wrap", { x: -5, y: 3, duration: 0.04, ease: "none" }, SLAM + 0.08);
+          tl.to("#counter-wrap", { x: 2, y: -1, duration: 0.04, ease: "none" }, SLAM + 0.12);
+          tl.to("#counter-wrap", { x: 0, y: 0, duration: 0.04, ease: "none" }, SLAM + 0.16);
+          // subline
+          tl.fromTo("#counter-sub", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" }, SUB);
+          // exit
+          tl.to(["#counter-kicker", "#counter-sub"], { opacity: 0, duration: 0.18, ease: "power2.in" }, END - 0.24);
+          tl.to("#counter-number", { opacity: 0, scale: 0.9, duration: 0.22, ease: "power2.in" }, END - 0.24);
+          tl.to("#counter-glow", { opacity: 0, duration: 0.2, ease: "power2.in" }, END - 0.24);
+          window.__timelines["counter"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
