@@ -1,0 +1,15 @@
+{
+  "track": "audio/music.mp3",
+  "trackDuration": 14.13,
+  "bpm": 125,
+  "notes": "Key transients of audio/music.mp3 (measured with audio/analyze_onsets.mjs). Stomps sit on a 125 BPM grid 0.504 + k*0.48 until ~8.0 s, then a sparse break (8.20, 8.68, 9.19, 9.53, 9.77), a big impact at 10.137, a final hit at 11.130 and a decaying tail to 14.13 s. Every visual moment below is one of those transients.",
+  "duration": 14.1,
+  "counter": { "start": 0, "end": 2.424, "slam": 0.504, "subline": 0.984, "exit": 2.1 },
+  "receipt": { "start": 2.424, "end": 5.05, "feed": 2.424, "line0": 2.664, "lineGap": 0.24, "stamp": 4.344, "out": 4.7 },
+  "holders": {
+    "start": 5.05, "end": 10.65, "chartIn": 5.05, "baseline": 5.304,
+    "stepSlots": [5.784, 6.264, 6.744, 7.224, 7.704, 8.201, 8.68, 9.189, 9.533, 9.768],
+    "badge": 10.137, "chartOut": 10.45
+  },
+  "finale": { "start": 10.65, "end": 14.1, "totalLabel": 10.65, "countupStart": 10.72, "countupEnd": 11.13, "logo": 11.6 }
+}

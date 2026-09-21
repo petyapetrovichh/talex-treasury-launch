@@ -1,14 +1,17 @@
-// Output formats. index.html is authored 1:1 (1080x1080). The 9:16 variant is
-// derived mechanically into a temporary project copy: the root and every
-// sub-composition root get data-height="1920", and <html> gets
-// data-format="portrait", which the scene CSS/JS use to re-layout (not crop).
+// Output formats. index.html is authored 16:9 (1920x1080) — the format that
+// `npm run weekly` renders. Other formats are derived mechanically into a
+// temporary project copy (root + every sub-composition root get the new
+// data-width/height, <html> gets data-format=...), and the scene CSS/JS
+// re-layout from the variables in weekly.css.
 import { cpSync, mkdtempSync, readFileSync, writeFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
+export const BASE = "16x9";
 export const FORMATS = {
-  "1x1": { width: 1080, height: 1080, format: "square", resolution: "square" },
-  "9x16": { width: 1080, height: 1920, format: "portrait", resolution: "portrait" },
+  "16x9": { width: 1920, height: 1080, format: "landscape", resolution: "landscape" },
+  "1x1":  { width: 1080, height: 1080, format: "square",    resolution: "square" },
+  "9x16": { width: 1080, height: 1920, format: "portrait",  resolution: "portrait" },
 };
 
 const SKIP = /[\\/](node_modules|output|renders|snapshots|\.hf-segments|\.hyperframes)([\\/]|$)/;
@@ -17,25 +20,25 @@ const SKIP = /[\\/](node_modules|output|renders|snapshots|\.hf-segments|\.hyperf
 export function materialize(root, formatKey) {
   const f = FORMATS[formatKey];
   if (!f) throw new Error(`unknown format ${formatKey} (use ${Object.keys(FORMATS).join("|")})`);
+  const base = FORMATS[BASE];
   const dir = mkdtempSync(join(tmpdir(), `talex-weekly-${formatKey}-`));
   cpSync(root, dir, { recursive: true, filter: (src) => !SKIP.test(src) });
-  if (formatKey !== "1x1") {
+  if (formatKey !== BASE) {
+    const resize = (s) => s
+      .replace(new RegExp(`data-width="${base.width}"`, "g"), `data-width="${f.width}"`)
+      .replace(new RegExp(`data-height="${base.height}"`, "g"), `data-height="${f.height}"`);
     const idx = join(dir, "index.html");
     let html = readFileSync(idx, "utf8");
-    html = html
-      .replace('data-resolution="square" data-format="square"', `data-resolution="${f.resolution}" data-format="${f.format}"`)
-      .replace("width=1080, height=1080", `width=${f.width}, height=${f.height}`)
-      .replace("width: 1080px; height: 1080px;", `width: ${f.width}px; height: ${f.height}px;`)
-      .replace(/data-height="1080"/g, `data-height="${f.height}"`)
-      .replace(/data-width="1080"/g, `data-width="${f.width}"`);
+    html = resize(html)
+      .replace(`data-resolution="${base.resolution}" data-format="${base.format}"`, `data-resolution="${f.resolution}" data-format="${f.format}"`)
+      .replace(`width=${base.width}, height=${base.height}`, `width=${f.width}, height=${f.height}`)
+      .replace(`width: ${base.width}px; height: ${base.height}px;`, `width: ${f.width}px; height: ${f.height}px;`);
     writeFileSync(idx, html);
     const comps = join(dir, "compositions");
     for (const name of readdirSync(comps)) {
       if (!name.endsWith(".html")) continue;
       const p = join(comps, name);
-      writeFileSync(p, readFileSync(p, "utf8")
-        .replace(/data-height="1080"/g, `data-height="${f.height}"`)
-        .replace(/data-width="1080"/g, `data-width="${f.width}"`));
+      writeFileSync(p, resize(readFileSync(p, "utf8")));
     }
   }
   return dir;

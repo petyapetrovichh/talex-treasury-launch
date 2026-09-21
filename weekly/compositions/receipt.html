@@ -52,7 +52,7 @@
         }
         #receipt-stamp-ink { position: absolute; inset: 0; background: rgba(110, 239, 0, 0.18); pointer-events: none; opacity: 0; }
       </style>
-      <div id="root" data-composition-id="receipt" data-width="1080" data-height="1080">
+      <div id="root" data-composition-id="receipt" data-width="1920" data-height="1080">
         <div id="receipt-stage">
           <div id="receipt-window">
             <div id="receipt-slit"></div>
@@ -96,7 +96,7 @@
             row.appendChild(k); row.appendChild(v);
             host.appendChild(row);
           });
-          var winH = W.isPortrait ? 980 : 820; // must match --receipt-h in weekly.css
+          var winH = W.isLandscape ? 860 : W.isPortrait ? 980 : 820; // must match --receipt-h in weekly.css
 
           var tl = gsap.timeline({ paused: true });
           tl.fromTo("#receipt-slit", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.2, ease: "power2.out" }, 0);
@@ -107,7 +107,7 @@
           rows.forEach(function (_, i) {
             tl.fromTo("#receipt-row-" + i, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.14, ease: "power2.out" }, LINE0 + (i + 1) * GAP);
           });
-          tl.fromTo("#receipt-foot", { opacity: 0 }, { opacity: 1, duration: 0.14 }, LINE0 + (rows.length + 1) * GAP);
+          tl.fromTo("#receipt-foot", { opacity: 0 }, { opacity: 1, duration: 0.14 }, LINE0 + (rows.length + 0.5) * GAP);
           // stamp slams on
           tl.fromTo("#receipt-stamp", { opacity: 0, scale: 3.2, rotation: -10 }, { opacity: 1, scale: 1, rotation: -10, duration: 0.16, ease: "power4.in" }, STAMP - 0.16);
           tl.fromTo("#receipt-stamp-ink", { opacity: 0.9 }, { opacity: 0, duration: 0.3, ease: "power2.out", immediateRender: false }, STAMP);
@@ -116,8 +116,8 @@
           tl.to("#receipt-window", { y: 0, duration: 0.06, ease: "none" }, STAMP + 0.1);
           tl.to("#receipt-stamp", { scale: 1.04, duration: 0.12, ease: "sine.inOut", yoyo: true, repeat: 1 }, STAMP + 0.1);
           // receipt flies out of frame
-          tl.to("#receipt-card", { y: -1500, rotation: -5, duration: 0.38, ease: "power3.in" }, OUT);
-          tl.to("#receipt-slit", { opacity: 0, duration: 0.16 }, OUT + 0.2);
+          tl.to("#receipt-card", { y: -1500, rotation: -5, duration: 0.32, ease: "power3.in" }, OUT);
+          tl.to("#receipt-slit", { opacity: 0, duration: 0.14 }, OUT + 0.16);
           window.__timelines["receipt"] = tl;
         })();
       </script>

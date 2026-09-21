@@ -12,7 +12,7 @@
           display: flex; align-items: center; justify-content: center;
         }
         #holders-card {
-          position: relative; width: 936px; padding: var(--holders-card-pad);
+          position: relative; width: var(--holders-card-w); padding: var(--holders-card-pad);
           background: linear-gradient(180deg, #111a1d 0%, #0e1517 100%);
           border: 1px solid var(--line); border-radius: 22px;
           box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
@@ -48,7 +48,7 @@
 
         /* 9:16 re-layout (stacked header, taller chart) comes from the --holders-* variables in weekly.css */
       </style>
-      <div id="root" data-composition-id="holders" data-width="1080" data-height="1080">
+      <div id="root" data-composition-id="holders" data-width="1920" data-height="1080">
         <div id="holders-stage">
           <div id="holders-card">
             <div id="holders-head">
@@ -82,7 +82,8 @@
           var n = H.length;
 
           // ---- chart geometry (pre-computed constants, no DOM measuring)
-          var VW = 848, VH = W.isPortrait ? 560 : 400;
+          var VW = W.isLandscape ? 1472 : 848; // = card inner width (--holders-card-w minus padding), so 1 SVG unit = 1px
+          var VH = W.isLandscape ? 470 : W.isPortrait ? 560 : 400;
           var padL = 84, padR = 28, padT = 26, padB = 56;
           var x0 = padL, x1 = VW - padR, y0 = padT, y1 = VH - padB;
 
@@ -159,12 +160,12 @@
           renderCount();
 
           var tl = gsap.timeline({ paused: true });
-          tl.fromTo("#holders-card", { opacity: 0, y: 40, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "power3.out" }, IN);
+          tl.fromTo("#holders-card", { opacity: 0, y: 40, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.26, ease: "power3.out" }, IN);
           tl.fromTo("#holders-countbox", { opacity: 0 }, { opacity: 1, duration: 0.2 }, IN + 0.1);
 
           var flashPoint = function (i, at) {
-            tl.fromTo(ptEls[i], { opacity: 1, scale: 0 }, { scale: 1, duration: 0.22, ease: "back.out(3)", transformOrigin: "50% 50%" }, at);
-            tl.fromTo(ringEls[i], { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.6, duration: 0.36, ease: "power2.out", transformOrigin: "50% 50%", immediateRender: false }, at);
+            tl.fromTo(ptEls[i], { opacity: 1, attr: { r: 0 } }, { attr: { r: 9 }, duration: 0.22, ease: "back.out(3)" }, at);
+            tl.fromTo(ringEls[i], { opacity: 0.9, attr: { r: 8 } }, { opacity: 0, attr: { r: 36 }, duration: 0.36, ease: "power2.out", immediateRender: false }, at);
             tl.fromTo(labEls[i], { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.18, ease: "power2.out" }, at + 0.02);
           };
           // baseline point (last week's closing value)
@@ -183,7 +184,7 @@
           tl.fromTo("#holders-badge", { opacity: 0, scale: 0.5, y: 10 }, { opacity: 1, scale: 1, y: 0, duration: 0.34, ease: "back.out(2.2)", transformOrigin: badgeOrigin }, BADGE);
           tl.fromTo("#holders-badge-net", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.24, ease: "power2.out" }, BADGE + 0.12);
           // chart clears
-          tl.to("#holders-card", { opacity: 0, scale: 0.94, y: -20, duration: 0.24, ease: "power2.in" }, OUT);
+          tl.to("#holders-card", { opacity: 0, scale: 0.94, y: -20, duration: 0.2, ease: "power2.in" }, OUT);
           window.__timelines["holders"] = tl;
         })();
       </script>

@@ -3,5 +3,3 @@ renders/
 snapshots/
 .hf-segments/
 .hyperframes/
-audio/_build/*.wav
-audio/_build/

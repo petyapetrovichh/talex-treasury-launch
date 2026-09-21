@@ -6,9 +6,8 @@
     "weekly": "node scripts/weekly.mjs",
     "prepare-data": "node scripts/weekly.mjs --prepare-only",
     "check": "node scripts/check.mjs",
+    "check:all": "node scripts/check.mjs --all",
     "dev": "node scripts/weekly.mjs --prepare-only && npx --yes hyperframes@0.8.58 preview",
-    "render:1x1": "node scripts/weekly.mjs --format 1x1",
-    "render:9x16": "node scripts/weekly.mjs --format 9x16",
-    "hit": "node audio/generate_hit.mjs"
+    "render:all": "node scripts/weekly.mjs --format all"
   }
 }

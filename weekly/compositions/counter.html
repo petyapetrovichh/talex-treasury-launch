@@ -38,7 +38,7 @@
         }
         #counter-sub b { color: var(--green); font-weight: 800; }
       </style>
-      <div id="root" data-composition-id="counter" data-width="1080" data-height="1080">
+      <div id="root" data-composition-id="counter" data-width="1920" data-height="1080">
         <div id="counter-flash"></div>
         <div id="counter-wrap">
           <div id="counter-kicker">TaleX Treasury · Weekly buyback</div>
@@ -52,8 +52,8 @@
       <script>
         (function () {
           var W = window.Weekly, S = W.schedule, d = W.derived;
-          var SLAM = S.slamAt, SUB = S.sublineAt, END = S.scenes.counter.end;
-          var fontPx = W.isPortrait ? 210 : 236; // must match --counter-size in weekly.css (1em = one digit row)
+          var SLAM = S.slamAt, SUB = S.sublineAt, EXIT = S.counterExitAt;
+          var fontPx = W.isLandscape ? 300 : W.isPortrait ? 210 : 236; // must match --counter-size in weekly.css (1em = one digit row)
 
           // Build the slot-machine digits from the formatted buyback amount.
           var text = d.buybackUsd; // e.g. "$1,258"
@@ -90,10 +90,10 @@
 
           var tl = gsap.timeline({ paused: true });
           // kicker + number container fade in fast
-          tl.fromTo("#counter-kicker", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0.06);
-          tl.fromTo("#counter-number", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.24, ease: "power2.out" }, 0.08);
+          tl.fromTo("#counter-kicker", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0);
+          tl.fromTo("#counter-number", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.2, ease: "power2.out" }, 0.02);
           // slot spin: every column lands exactly on the hit
-          var spinStart = 0.12;
+          var spinStart = 0.04; // the intro swell of the track is the spin; the first stomp is the slam
           strips.forEach(function (s) {
             tl.fromTo(s.el, { y: 0 }, { y: s.travel, duration: SLAM - spinStart, ease: "power3.out" }, spinStart);
           });
@@ -110,9 +110,9 @@
           // subline
           tl.fromTo("#counter-sub", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" }, SUB);
           // exit
-          tl.to(["#counter-kicker", "#counter-sub"], { opacity: 0, duration: 0.18, ease: "power2.in" }, END - 0.24);
-          tl.to("#counter-number", { opacity: 0, scale: 0.9, duration: 0.22, ease: "power2.in" }, END - 0.24);
-          tl.to("#counter-glow", { opacity: 0, duration: 0.2, ease: "power2.in" }, END - 0.24);
+          tl.to(["#counter-kicker", "#counter-sub"], { opacity: 0, duration: 0.2, ease: "power2.in" }, EXIT);
+          tl.to("#counter-number", { opacity: 0, scale: 0.9, duration: 0.26, ease: "power2.in" }, EXIT);
+          tl.to("#counter-glow", { opacity: 0, duration: 0.22, ease: "power2.in" }, EXIT);
           window.__timelines["counter"] = tl;
         })();
       </script>

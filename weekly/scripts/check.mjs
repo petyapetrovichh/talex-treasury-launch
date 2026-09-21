@@ -1,20 +1,24 @@
 #!/usr/bin/env node
-// npm run check — regenerates data/week.js + music, then runs `hyperframes check`
-// for BOTH output formats (each from a temp copy laid out for that format,
-// see scripts/formats.mjs). Extra CLI args are passed through to `check`.
+// npm run check — regenerates data/week.js, verifies index.html against the
+// schedule, then runs `hyperframes check` on the 16:9 project. Pass --all to
+// also check the derived 1:1 and 9:16 layouts (each from a temp copy, see
+// scripts/formats.mjs). Other CLI args are passed through to `check`.
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { prepare } from "./weekly.mjs";
-import { FORMATS, materialize, cleanup } from "./formats.mjs";
+import { FORMATS, BASE, materialize, cleanup } from "./formats.mjs";
 
 const HYPERFRAMES = "hyperframes@0.8.58";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const extra = process.argv.slice(2);
+const args = process.argv.slice(2);
+const all = args.includes("--all");
+const extra = args.filter((a) => a !== "--all");
 
 prepare();
+const keys = all ? Object.keys(FORMATS) : [BASE];
 const results = {};
-for (const key of Object.keys(FORMATS)) {
+for (const key of keys) {
   const dir = materialize(root, key);
   try {
     console.log(`\n=== hyperframes check (${key}: ${FORMATS[key].width}x${FORMATS[key].height}) ===`);
@@ -29,4 +33,4 @@ if (failed.length) {
   console.error(`\ncheck failed for: ${failed.join(", ")}`);
   process.exit(1);
 }
-console.log("\ncheck passed for both formats");
+console.log(`\ncheck passed (${keys.join(", ")})`);

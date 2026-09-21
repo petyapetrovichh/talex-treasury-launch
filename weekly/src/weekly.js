@@ -36,6 +36,7 @@
     schedule: D.schedule,
     format: document.documentElement.getAttribute("data-format") || "square",
     isPortrait: document.documentElement.getAttribute("data-format") === "portrait",
+    isLandscape: document.documentElement.getAttribute("data-format") === "landscape",
     fmt: { int: int, usd: usd, fixed: fixed, shortTx: shortTx, k: kFormat, signed: signed },
     derived: {
       buybackUsd: usd(D.buyback_usd),
