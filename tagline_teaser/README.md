@@ -4,8 +4,8 @@
 
 | Output | Size | Status |
 | --- | --- | --- |
-| `output/talex_tagline_horizontal.mp4` | 1920x1080, 60fps | current: typing rhythm and key sounds from the reference recording |
-| `output/talex_tagline_vertical.mp4` | 1080x1920, 60fps | previous version (8s). The vertical layout is not re-rendered yet |
+| `output/talex_tagline_horizontal.mp4` | 1920x1080, 60fps | current: one centered line |
+| `output/talex_tagline_vertical.mp4` | 1080x1920, 60fps | current: same timing and audio, three centered lines (dots at the end of line 2) |
 
 ## How the typing is made
 
