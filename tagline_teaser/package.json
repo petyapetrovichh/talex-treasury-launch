@@ -1,0 +1,15 @@
+{
+  "name": "tagline_teaser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python3 scripts/make_logo_hd.py && python3 scripts/build_timeline_audio.py && npm run sync",
+    "sync": "node scripts/sync.mjs",
+    "check": "npm run sync && npx --yes hyperframes@0.8.61 check horizontal && npx --yes hyperframes@0.8.61 check vertical",
+    "render": "npm run sync && npm run render:horizontal && npm run render:vertical",
+    "render:horizontal": "npx --yes hyperframes@0.8.61 render horizontal --fps 60 --quality delivery -o output/talex_tagline_horizontal.mp4",
+    "render:vertical": "npx --yes hyperframes@0.8.61 render vertical --fps 60 --quality delivery -o output/talex_tagline_vertical.mp4",
+    "dev:horizontal": "npm run sync && npx --yes hyperframes@0.8.61 preview horizontal",
+    "dev:vertical": "npm run sync && npx --yes hyperframes@0.8.61 preview vertical"
+  }
+}

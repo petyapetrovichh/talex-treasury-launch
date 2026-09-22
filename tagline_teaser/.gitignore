@@ -1,0 +1,14 @@
+# Synced from shared/ by `npm run sync` (runs before check/render)
+horizontal/assets/
+horizontal/teaser.js
+horizontal/teaser.css
+horizontal/timeline.js
+vertical/assets/
+vertical/teaser.js
+vertical/teaser.css
+vertical/timeline.js
+# Tool scratch output
+**/renders/
+**/snapshots/
+**/.debug/
+node_modules/
