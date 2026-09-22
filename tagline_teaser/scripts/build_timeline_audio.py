@@ -91,11 +91,11 @@ def detect_keystrokes(x):
 taps = detect_keystrokes(decode(REF))
 assert len(taps) == 83, f"expected 83 keystrokes in the reference, found {len(taps)}"
 
-# Level: bring the (very quiet) recorded taps up to ~-15 dBFS, keeping 40% of
+# Level: bring the (very quiet) recorded taps up to ~-20 dBFS, keeping 40% of
 # their natural loudness variation so the typing still feels human.
 peaks = np.array([np.abs(seg).max() for _, seg in taps])
 p_med = np.median(peaks[REF_A + REF_B])
-TARGET = 10 ** (-15 / 20)
+TARGET = 10 ** (-20 / 20)
 
 
 def tap(k):
