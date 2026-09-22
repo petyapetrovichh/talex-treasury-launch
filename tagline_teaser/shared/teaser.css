@@ -83,6 +83,12 @@ body {
   background: #6ff000;
 }
 
+.dots {
+  display: inline-block;
+  width: 0;
+  white-space: pre;
+}
+
 #measure {
   position: absolute;
   left: 0;

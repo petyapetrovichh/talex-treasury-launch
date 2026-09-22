@@ -21,55 +21,64 @@ window.buildTeaser = function (tl) {
     return n;
   };
   const makeLine = () => text.appendChild(el("div", "line"));
-  const makeCursor = (line) => {
-    const c = line.appendChild(el("span", "cursor"));
+  const makeCursor = (parent) => {
+    const c = parent.appendChild(el("span", "cursor"));
     c.appendChild(el("i"));
     return c;
   };
-  const chars = (line, str, cls) =>
-    Array.from(str).map((ch) => line.appendChild(el("span", "ch " + cls, ch)));
+  const chars = (parent, str, cls) =>
+    Array.from(str).map((ch) => parent.appendChild(el("span", "ch " + cls, ch)));
+  // The dots live in a zero-width box: they blink after "Businesses" without
+  // pushing the centered text, and carry their own cursor.
+  const makeDots = (parent) => {
+    const box = parent.appendChild(el("span", "dots"));
+    return { dots: chars(box, "...", "green"), cursor: makeCursor(box) };
+  };
 
   // --- build DOM -----------------------------------------------------------
   // Every typed glyph starts display:none, so the visible string's width grows
   // one glyph at a time while its line stays centered (centered typewriter).
-  let a1, a2, dots, b, breakA, breakB, cursorForA2, cursorForB;
-  const cursors = [];
+  let a1, a2, b, breakA, breakB, dotsUI, active;
   if (layout === "horizontal") {
     const line = makeLine();
     a1 = chars(line, LINE1, "white");
     breakA = chars(line, " ", "white")[0];
     a2 = chars(line, LINE2, "white");
-    dots = chars(line, "...", "green");
+    dotsUI = makeDots(line);
     breakB = chars(line, " ", "green")[0];
     b = chars(line, LINE3, "green");
-    cursors.push(makeCursor(line));
-    cursorForA2 = cursorForB = cursors[0];
+    const main = makeCursor(line);
+    active = (f) => (f >= T.dots[0] && f < T.deletes[2] ? dotsUI.cursor : main);
   } else {
     const [l1, l2, l3] = [makeLine(), makeLine(), makeLine()];
     a1 = chars(l1, LINE1, "white");
-    cursors.push(makeCursor(l1));
+    const c1 = makeCursor(l1);
     a2 = chars(l2, LINE2, "white");
-    dots = chars(l2, "...", "green");
-    cursors.push(makeCursor(l2));
+    dotsUI = makeDots(l2);
+    const c2 = makeCursor(l2);
     b = chars(l3, LINE3, "green");
-    cursors.push(makeCursor(l3));
-    cursorForA2 = cursors[1];
-    cursorForB = cursors[2];
+    const c3 = makeCursor(l3);
+    active = (f) =>
+      f < T.typeA[T.splitA] ? c1
+      : f < T.dots[0] ? c2
+      : f < T.deletes[2] ? dotsUI.cursor
+      : f < T.typeB[0] ? c2
+      : c3;
   }
+  const cursors = Array.from(text.querySelectorAll(".cursor"));
 
-  // --- auto-fit font size: largest size where the longest final line fits ---
-  const finalLines =
-    layout === "horizontal"
-      ? [LINE1 + " " + LINE2 + "... " + LINE3]
-      : [LINE1, LINE2 + "...", LINE3];
+  // --- auto-fit font size: largest size where every line fits the margins ---
+  // Dots overflow to the right of a centered line, so they count twice.
   const measure = document.getElementById("measure");
+  const widthOf = (s) => measure.appendChild(el("span", "", s)).getBoundingClientRect().width;
   function fit() {
     measure.textContent = "";
-    const widths = finalLines.map((s) => {
-      const m = measure.appendChild(el("span", "", s));
-      return m.getBoundingClientRect().width;
-    });
-    const px = Math.floor((100 * (W - 2 * margin)) / Math.max(...widths) * 2) / 2;
+    const dotsW = widthOf("...");
+    const widths =
+      layout === "horizontal"
+        ? [widthOf(LINE1 + " " + LINE2 + " " + LINE3), widthOf(LINE1 + " " + LINE2) + 2 * dotsW]
+        : [widthOf(LINE1), widthOf(LINE2) + 2 * dotsW, widthOf(LINE3)];
+    const px = Math.floor(((100 * (W - 2 * margin)) / Math.max(...widths)) * 2) / 2;
     root.style.setProperty("--fs", px + "px");
     root.dataset.fitPx = String(px);
   }
@@ -79,42 +88,39 @@ window.buildTeaser = function (tl) {
   // --- timeline ------------------------------------------------------------
   const show = (n, f) => tl.set(n, { display: "inline" }, at(f));
   const hide = (n, f) => tl.set(n, { display: "none" }, at(f));
-  const cursorOn = (c, on, f) => tl.set(c, { opacity: on ? 1 : 0 }, at(f));
 
-  cursors.forEach((c) => tl.set(c, { opacity: 0 }, 0));
-
-  // 1) cursor blink x2 (on/off/on/off), then solid as typing starts
-  const B = T.blink;
-  for (let k = 0; k < B.count * 2; k++) cursorOn(cursors[0], k % 2 === 0, B.start + k * B.state);
-  cursorOn(cursors[0], true, T.typeA[0]);
-
-  // 2) main phrase
+  // 1) main phrase
   T.typeA.forEach((f, i) => {
     if (i < T.splitA) show(a1[i], f);
-    else if (i === T.splitA) {
-      if (breakA) show(breakA, f);
-      if (cursorForA2 !== cursors[0]) { cursorOn(cursors[0], false, f); cursorOn(cursorForA2, true, f); }
-    } else show(a2[i - T.splitA - 1], f);
+    else if (i === T.splitA) { if (breakA) show(breakA, f); }
+    else show(a2[i - T.splitA - 1], f);
   });
 
-  // 3) loading dots: build, clear, build again and settle
-  T.dots.forEach((loop) => {
-    loop.on.forEach((f, k) => show(dots[k], f));
-    if (loop.off !== null) dots.forEach((d) => hide(d, loop.off));
-  });
+  // 2) dots typed, cursor blinks twice, dots erased (last one first)
+  T.dots.forEach((f, k) => show(dotsUI.dots[k], f));
+  T.deletes.forEach((f, k) => hide(dotsUI.dots[2 - k], f));
 
-  // 4) final phrase
+  // 3) final phrase
   T.typeB.forEach((f, i) => {
-    if (i === 0) {
-      if (breakB) show(breakB, f);
-      if (cursorForB !== cursorForA2) { cursorOn(cursorForA2, false, f); cursorOn(cursorForB, true, f); }
-    } else show(b[i - 1], f);
+    if (i === 0) { if (breakB) show(breakB, f); }
+    else show(b[i - 1], f);
   });
 
-  // 5) hold -> cursor gone -> hard cut to black -> logo cut-in
-  cursorOn(cursorForB, false, T.cursorHide);
+  // 4) cursor: iOS-style blink while idle, solid while typing. At every
+  //    change point only the active cursor may be visible.
+  const onAt = (f) => T.cursor.reduce((on, [g, v]) => (g <= f ? v : on), 0);
+  const changes = new Set(T.cursor.map(([g]) => g));
+  [T.typeA[T.splitA], T.dots[0], T.deletes[2], T.typeB[0]].forEach((g) => changes.add(g));
+  cursors.forEach((c) => tl.set(c, { opacity: 0 }, 0));
+  [...changes].sort((x, y) => x - y).forEach((f) => {
+    const cur = active(f);
+    const on = onAt(f);
+    cursors.forEach((c) => tl.set(c, { opacity: c === cur && on ? 1 : 0 }, f === 0 ? 0 : at(f)));
+  });
+
+  // 5) hard cut to black -> soft logo fade-in, synced with the boom
   tl.set("#text-scene", { opacity: 0 }, at(T.cut));
-  tl.set("#logo", { opacity: 1 }, at(T.logo));
+  tl.fromTo("#logo", { opacity: 0 }, { opacity: 1, duration: T.logoFade / T.fps, ease: "power1.out" }, at(T.logo));
   tl.set({}, {}, T.end / T.fps);
   return tl;
 };
